@@ -15,14 +15,32 @@ function initEventHandlers() {
     dropzone.addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
 
-    // Drag and Drop listeners
-    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.style.background = "#e0e7ff"; });
-    dropzone.addEventListener("dragleave", () => { dropzone.style.background = "#ffffff"; });
-    dropzone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropzone.style.background = "#ffffff";
-        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+    // --- REPLACED DRAG AND DROP HANDLERS TO PREVENT BROWSER OVERRIDES ---
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
     });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => {
+            dropzone.style.background = "#e0e7ff";
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => {
+            dropzone.style.background = "#ffffff";
+        }, false);
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    }, false);
+    // --- END OF REPLACED DRAG AND DROP HANDLERS ---
 
     // Panel collapsing toggles
     document.getElementById("toggle-ungrouped").addEventListener("click", () => {
@@ -208,10 +226,8 @@ function attachNodeInteractivity(children) {
 function parseOtherMatches(rawString) {
     if (!rawString) return [];
     try {
-        // Clean out outer {} formatting strings safely if passing strict text blocks
         let clean = rawString.trim();
         if(clean.startsWith("{") && clean.endsWith("}")) {
-            // Evaluates text formatted like {"Length": 0.95, "Width": 0.82}
             const cleanJson = JSON.parse(clean);
             return Object.entries(cleanJson).map(([name, score]) => ({ name, score }));
         }
@@ -222,9 +238,3 @@ function parseOtherMatches(rawString) {
     }
 }
 
-function removeExistingTooltips() {
-    document.querySelectorAll(".node-alternates-tooltip").forEach(t => t.remove());
-}
-
-// 5. DATA STATE OPERATIONS: Re-assign parent references
-function updateAttributeParent(attributeName, newParentName) {
