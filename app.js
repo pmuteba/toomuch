@@ -13,9 +13,15 @@ function initEventHandlers() {
 
     // Click on dropzone triggers hidden file input
     dropzone.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+    
+    // File change handler via standard browsing window click
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFile(e.target.files[0]); // FIXED: Isolate the single raw file object [0]
+        }
+    });
 
-    // --- REPLACED DRAG AND DROP HANDLERS TO PREVENT BROWSER OVERRIDES ---
+    // Prevent browser from opening/downloading the file natively on ALL drag phases
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropzone.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -23,24 +29,28 @@ function initEventHandlers() {
         }, false);
     });
 
+    // Provide immediate visual confirmation hover highlights
     ['dragenter', 'dragover'].forEach(eventName => {
         dropzone.addEventListener(eventName, () => {
             dropzone.style.background = "#e0e7ff";
+            dropzone.style.borderColor = "#4f46e5";
         }, false);
     });
 
     ['dragleave', 'drop'].forEach(eventName => {
         dropzone.addEventListener(eventName, () => {
             dropzone.style.background = "#ffffff";
+            dropzone.style.borderColor = "#a5b4fc";
         }, false);
     });
 
+    // Handle dropped files
     dropzone.addEventListener("drop", (e) => {
-        if (e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0]);
+        const dt = e.dataTransfer;
+        if (dt.files && dt.files.length > 0) {
+            handleFile(dt.files[0]); // FIXED: Isolate the single raw file object [0]
         }
     }, false);
-    // --- END OF REPLACED DRAG AND DROP HANDLERS ---
 
     // Panel collapsing toggles
     document.getElementById("toggle-ungrouped").addEventListener("click", () => {
@@ -48,7 +58,7 @@ function initEventHandlers() {
     });
     document.getElementById("toggle-table").addEventListener("click", () => {
         document.getElementById("table-panel").classList.toggle("uncollapsed");
-        if (tabulatorTable) tabulatorTable.redraw(); // Force recalculate dimensions on expand
+        if (tabulatorTable) tabulatorTable.redraw(); 
     });
 
     // Action button triggers
@@ -62,21 +72,37 @@ function handleFile(file) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Convert rows into a raw JSON array of objects
-        globalData = XLSX.utils.sheet_to_json(worksheet);
-        
-        // Advance view to the dashboard state
-        document.getElementById("upload-screen").classList.remove("active");
-        document.getElementById("dashboard-screen").classList.add("active");
-        
-        // Initialize Spreadsheet and visualization layers
-        buildTabulatorTable();
-        rebuildUIFromMemory();
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // FIXED: Target index [0] to extract the first spreadsheet sheet key string safely
+            const firstSheetName = workbook.SheetNames[0]; 
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            if (!worksheet) {
+                throw new Error("The selected Excel sheet appears to be empty.");
+            }
+            
+            // Convert rows into a raw JSON array of objects
+            globalData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (globalData.length === 0) {
+                alert("Warning: No row entries detected in this sheet. Ensure headers match expected attributes.");
+                return;
+            }
+
+            // Switch interface screens
+            document.getElementById("upload-screen").classList.remove("active");
+            document.getElementById("dashboard-screen").classList.add("active");
+            
+            // Render spreadsheet & trees
+            buildTabulatorTable();
+            rebuildUIFromMemory();
+        } catch (error) {
+            console.error("Excel File Ingestion Error:", error);
+            alert("Could not process spreadsheet. Please ensure it is a valid .xlsx or .xls file.");
+        }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -98,7 +124,6 @@ function buildTabulatorTable() {
         ]
     });
 
-    // Keep memory in sync automatically when cells are hand-edited inside the grid
     tabulatorTable.on("cellEdited", function(cell) {
         globalData = tabulatorTable.getData();
     });
@@ -112,18 +137,17 @@ function rebuildUIFromMemory() {
     treeGrid.innerHTML = "";
     ungroupedList.innerHTML = "";
 
-    // Step A: Separate Merge data from the non-merged metadata entries
     const mergeRows = globalData.filter(row => row["Set Status To"] === "MERGE");
     const ungroupedRows = globalData.filter(row => row["Set Status To"] !== "MERGE");
 
     // Populate Right Sidebar (Ungrouped Items)
     ungroupedRows.forEach(row => {
+        if (!row["Attribute"]) return;
         const item = document.createElement("div");
         item.className = `ungrouped-item ${row["Set Status To"] || 'WIP'}`;
         item.innerText = row["Attribute"];
         item.setAttribute("draggable", "true");
         
-        // Enable native Drag & Drop source tracking
         item.addEventListener("dragstart", (e) => {
             e.dataTransfer.setData("text/plain", JSON.stringify({ source: 'UNGROUPED', attribute: row["Attribute"] }));
         });
@@ -131,7 +155,7 @@ function rebuildUIFromMemory() {
         ungroupedList.appendChild(item);
     });
 
-    // Step B: Group matching leaves cleanly under their unique "Recommended Merge" target root node
+    // Group matching leaves cleanly under their unique "Recommended Merge" target root node
     const treeMap = {};
     mergeRows.forEach(row => {
         const root = row["Recommended Merge"] || "Unspecified Target";
@@ -139,7 +163,7 @@ function rebuildUIFromMemory() {
         treeMap[root].push(row);
     });
 
-    // Step C: Generate functional HTML containers for each individual relationship group
+    // Generate functional HTML containers for each individual relationship group
     let treeCounter = 0;
     for (const [rootNodeName, children] of Object.entries(treeMap)) {
         const treeContainerId = `tree-canvas-${treeCounter++}`;
@@ -149,7 +173,6 @@ function rebuildUIFromMemory() {
         card.innerHTML = `<div id="${treeContainerId}" class="tree-canvas-render"></div>`;
         treeGrid.appendChild(card);
 
-        // Convert the structural loop data to a compatible Treant configuration format
         const treantConfig = {
             chart: { container: `#${treeContainerId}`, connecters: { type: "step" } },
             nodeStructure: {
@@ -158,16 +181,13 @@ function rebuildUIFromMemory() {
                 children: children.map(child => ({
                     text: { name: child["Attribute"] },
                     HTMLclass: "leaf-node-style",
-                    HTMLid: `node-${btoa(encodeURIComponent(child["Attribute"]))}`, // Safe structural tracking handles symbols
+                    HTMLid: `node-${btoa(encodeURIComponent(child["Attribute"]))}`, 
                     dataAttributes: { attr: child["Attribute"] }
                 }))
             }
         };
 
-        // Render Tree into current card loop frame
         new Treant(treantConfig);
-        
-        // Attach operational interactivity mappings (Hover Actions for Alternates)
         attachNodeInteractivity(children);
     }
 }
@@ -179,11 +199,9 @@ function attachNodeInteractivity(children) {
         const nodeElement = document.getElementById(encodedId);
         if (!nodeElement) return;
 
-        // Mouse Hover: Generate absolute tooltip positioning displaying AI's fallback recommendations
         nodeElement.addEventListener("mouseenter", (e) => {
             removeExistingTooltips();
             
-            // Safe JSON string parser parsing alternate lists
             const alternates = parseOtherMatches(child["Other Matches"]);
             if (alternates.length === 0) return;
 
@@ -196,7 +214,6 @@ function attachNodeInteractivity(children) {
                 link.className = "tooltip-alt-link";
                 link.innerText = `${alt.name} (${Math.round(alt.score * 100)}%)`;
                 
-                // Swap hierarchy upon choosing fallback match directly
                 link.addEventListener("click", () => {
                     updateAttributeParent(child["Attribute"], alt.name);
                     removeExistingTooltips();
@@ -210,7 +227,6 @@ function attachNodeInteractivity(children) {
             tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
         });
 
-        // Kill overlay visibility when moving focus completely away
         nodeElement.addEventListener("mouseleave", (e) => {
             setTimeout(() => {
                 const activeTooltip = document.querySelector(".node-alternates-tooltip");
@@ -222,7 +238,6 @@ function attachNodeInteractivity(children) {
     });
 }
 
-// Utility: Strip structural brackets out of custom formatting types safely
 function parseOtherMatches(rawString) {
     if (!rawString) return [];
     try {
@@ -237,32 +252,26 @@ function parseOtherMatches(rawString) {
         return [];
     }
 }
-
 function removeExistingTooltips() {
     document.querySelectorAll(".node-alternates-tooltip").forEach(t => t.remove());
 }
-
 // 5. DATA STATE OPERATIONS: Re-assign parent references
 function updateAttributeParent(attributeName, newParentName) {
     const targetRow = globalData.find(row => row["Attribute"] === attributeName);
-    if (targetRow) {targetRow["Recommended Merge"] = newParentName;
-                    targetRow["Set Status To"] = "MERGE"; 
-                    // Keeps bound inside visual flow tree sets
-                    // Sync structures back across running instances
-                    if (tabulatorTable) tabulatorTable.setData(globalData);
-                                    rebuildUIFromMemory();
-                   }
-}
-
-// 6. SYNCHRONIZATION AND WRITING: Collect visual changes back into the final pipeline data grid
-function syncTreesToMemory() {
-    if (tabulatorTable) {
-        globalData = tabulatorTable.getData();
+    if (targetRow) {
+        targetRow["Recommended Merge"] = newParentName;
+        targetRow["Set Status To"] = "MERGE";
+        if (tabulatorTable) tabulatorTable.setData(globalData);
         rebuildUIFromMemory();
-        alert("State variables synchronized successfully.");
     }
 }
-
+// 6. SYNCHRONIZATION AND WRITING: Collect visual changes back into the final pipeline data grid
+function syncTreesToMemory() {
+    if (tabulatorTable) {globalData = tabulatorTable.getData();
+                         rebuildUIFromMemory();
+                         alert("State variables synchronized successfully.");
+                        }
+}
 // 7. FILE EXPORT PIPELINE: Write active data matrices straight to dynamic spreadsheet files
 function exportToExcel() {
     const worksheet = XLSX.utils.json_to_sheet(globalData);
