@@ -238,3 +238,35 @@ function parseOtherMatches(rawString) {
     }
 }
 
+function removeExistingTooltips() {
+    document.querySelectorAll(".node-alternates-tooltip").forEach(t => t.remove());
+}
+
+// 5. DATA STATE OPERATIONS: Re-assign parent references
+function updateAttributeParent(attributeName, newParentName) {
+    const targetRow = globalData.find(row => row["Attribute"] === attributeName);
+    if (targetRow) {targetRow["Recommended Merge"] = newParentName;
+                    targetRow["Set Status To"] = "MERGE"; 
+                    // Keeps bound inside visual flow tree sets
+                    // Sync structures back across running instances
+                    if (tabulatorTable) tabulatorTable.setData(globalData);
+                                    rebuildUIFromMemory();
+                   }
+}
+
+// 6. SYNCHRONIZATION AND WRITING: Collect visual changes back into the final pipeline data grid
+function syncTreesToMemory() {
+    if (tabulatorTable) {
+        globalData = tabulatorTable.getData();
+        rebuildUIFromMemory();
+        alert("State variables synchronized successfully.");
+    }
+}
+
+// 7. FILE EXPORT PIPELINE: Write active data matrices straight to dynamic spreadsheet files
+function exportToExcel() {
+    const worksheet = XLSX.utils.json_to_sheet(globalData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Updated Attributes");
+    XLSX.writeFile(workbook, "Attribute_Deduplication_Output.xlsx");
+}
