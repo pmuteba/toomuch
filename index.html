@@ -1,2 +1,84 @@
-<h1>Hey girrrrrl ~Brittany Brosky</h1>
-<img src="https://s.mxmcdn.net/dynamic-images/image/572/572/webp/https%3A%2F%2Faudioboom.com%2Fi%2F40500966.jpg" alt="Brittany Looking at the camera" width="1000" height="900">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relationship Visualizer & Editor</title>
+    
+    <!-- Tabulator CSS (For the spreadsheet) -->
+    <link href="https://unpkg.com" rel="stylesheet">
+    <!-- Treant CSS (For the tree visualizations) -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- SCREEN 1: The Initial File Upload Dropzone -->
+    <div id="upload-screen" class="screen active">
+        <div id="dropzone">
+            <p>Drag & Drop your Excel file here or <span class="browse-btn">Browse</span></p>
+            <input type="file" id="file-input" accept=".xlsx, .xls" hidden>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: The Main Application Dashboard -->
+    <div id="dashboard-screen" class="screen">
+        
+        <!-- Main Window Container -->
+        <div class="main-layout">
+            
+            <!-- Central Trees Window -->
+            <div id="trees-window">
+                <div class="window-header">
+                    <h2>Relationship Trees</h2>
+                </div>
+                <!-- Tree grid container (max 4 per row) -->
+                <div id="trees-grid"></div>
+                
+                <!-- Action Buttons at bottom of Trees -->
+                <div class="trees-actions">
+                    <button id="save-btn" class="btn primary">Save Changes</button>
+                    <button id="download-btn" class="btn success">Download Excel</button>
+                </div>
+            </div>
+
+            <!-- Far Right Collapsing Panel: Ungrouped Attributes -->
+            <div id="ungrouped-panel" class="panel collapsed">
+                <button id="toggle-ungrouped" class="toggle-btn">◀ Ungrouped</button>
+                <div class="panel-content">
+                    <h3>Ungrouped Attributes</h3>
+                    <div id="ungrouped-list" class="scrollable-list"></div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Bottom Collapsing Panel: Interactive Table -->
+        <div id="table-panel" class="panel collapsed">
+            <button id="toggle-table" class="toggle-btn">▲ Table View</button>
+            <div class="panel-content">
+                <div class="table-header-actions">
+                    <h3>Data Spreadsheet</h3>
+                    <button id="refresh-btn" class="btn secondary">Refresh Trees</button>
+                </div>
+                <!-- Tabulator Container -->
+                <div id="excel-table"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Core CDNs -->
+    <!-- SheetJS for Excel processing -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Raphael & Treant for Tree Diagrams -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+    <!-- Tabulator Grid Engine -->
+    <script src="https://unpkg.com"></script>
+    
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
