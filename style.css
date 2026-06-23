@@ -1,0 +1,148 @@
+:root {
+    --bg-color: #f4f6f9;
+    --card-bg: #ffffff;
+    --border-color: #d1d5db;
+    --text-main: #1f2937;
+    
+    /* Status Colors */
+    --color-drop: #ef4444;   /* Red */
+    --color-nav: #3b82f6;    /* Blue */
+    --color-keep: #10b981;   /* Green */
+    --color-wip: #eab308;    /* Yellow */
+    --color-merge: #f97316;  /* Orange */
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* Screen Management */
+.screen { display: none; height: 100vh; width: 100vw; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* Dropzone Styles */
+#upload-screen { justify-content: center; align-items: center; }
+#dropzone {
+    border: 3px dashed #a5b4fc;
+    padding: 40px;
+    border-radius: 12px;
+    background: var(--card-bg);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+#dropzone:hover { transform: scale(1.02); }
+.browse-btn { color: #4f46e5; font-weight: bold; text-decoration: underline; }
+
+/* Dashboard Layout */
+#dashboard-screen { position: relative; }
+.main-layout { display: flex; flex: 1; height: calc(100vh - 40px); overflow: hidden; }
+
+/* Trees Window Styles */
+#trees-window {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+    margin-right: 40px; /* Space for collapsed sidebar */
+}
+#trees-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22%, 1fr)); /* Max 4 items per row */
+    gap: 20px;
+    flex: 1;
+}
+
+/* Tree Node Styling (Treant Overrides) */
+.Treant .node { 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    background: #fff; 
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+}
+.Treant .node-name { font-weight: bold; }
+
+/* Collapsing Side Panel (Ungrouped) */
+#ungrouped-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    width: 300px;
+    background: var(--card-bg);
+    border-left: 1px solid var(--border-color);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+}
+#ungrouped-panel.collapsed { transform: translateX(260px); }
+#ungrouped-panel .toggle-btn {
+    position: absolute;
+    left: -40px;
+    top: 20px;
+    width: 40px;
+    height: 40px;
+    background: #374151;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+/* Panel Internal Typography and Scrolling */
+.panel-content { padding: 20px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.scrollable-list { flex: 1; overflow-y: auto; margin-top: 10px; }
+
+/* Status Badges List styling */
+.ungrouped-item {
+    padding: 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    border-left: 5px solid transparent;
+    background: #f9fafb;
+}
+.ungrouped-item.DROP { border-left-color: var(--color-drop); }
+.ungrouped-item.NAV { border-left-color: var(--color-nav); }
+.ungrouped-item.KEEP { border-left-color: var(--color-keep); }
+.ungrouped-item.WIP { border-left-color: var(--color-wip); }
+.ungrouped-item.MERGE { border-left-color: var(--color-merge); }
+
+/* Bottom Collapsing Panel (Table) */
+#table-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 400px;
+    background: var(--card-bg);
+    border-top: 2px solid var(--border-color);
+    transition: transform 0.3s ease;
+    z-index: 20;
+    transform: translateY(360px);
+}
+#table-panel.uncollapsed { transform: translateY(0); }
+#table-panel .toggle-btn {
+    position: absolute;
+    top: -40px;
+    left: 20px;
+    height: 40px;
+    background: #374151;
+    color: white;
+    border: none;
+    padding: 0 15px;
+    cursor: pointer;
+}
+.table-header-actions { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px;}
+
+/* Buttons Base Layout */
+.trees-actions { padding: 15px 0; display: flex; gap: 10px; }
+.btn { padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; }
+.btn.primary { background: #4f46e5; color: white; }
+.btn.secondary { background: #4b5563; color: white; }
+.btn.success { background: #16a34a; color: white; }
