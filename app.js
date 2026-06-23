@@ -17,7 +17,8 @@ function initEventHandlers() {
     // File change handler via standard browsing window click
     fileInput.addEventListener("change", (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            handleFile(e.target.files[0]); // FIXED: Explicitly extract the first file object from the list
+            console.log("File picked via browser:", e.target.files[0]);
+            handleFile(e.target.files[0]); // FIXED: Extracted the single raw File object
         }
     });
 
@@ -48,7 +49,8 @@ function initEventHandlers() {
     dropzone.addEventListener("drop", (e) => {
         const dt = e.dataTransfer;
         if (dt.files && dt.files.length > 0) {
-            handleFile(dt.files[0]); // FIXED: Explicitly extract the first file object from the drop payload
+            console.log("File picked via drag and drop:", dt.files[0]);
+            handleFile(dt.files[0]); // FIXED: Extracted the single raw File object
         }
     }, false);
 
@@ -68,24 +70,29 @@ function initEventHandlers() {
 }
 
 // 1. DATA INGESTION: Read uploaded Excel sheet into memory
-function handleFile(file) {
-    if (!file) return;
+function handleFile(rawFileObject) {
+    if (!rawFileObject) return;
+    
+    console.log("Executing FileReader on target file:", rawFileObject.name);
     const reader = new FileReader();
+    
     reader.onload = (e) => {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // FIXED: Added [0] index to correctly grab the first tab name string
+            // FIXED: Target index 0 to grab the first sheet tab name string correctly
             const firstSheetName = workbook.SheetNames[0]; 
-            const worksheet = workbook.Sheets[firstSheetName];
+            console.log("Targeting sheet tab name:", firstSheetName);
             
+            const worksheet = workbook.Sheets[firstSheetName];
             if (!worksheet) {
                 throw new Error("The selected Excel sheet appears to be empty.");
             }
             
             // Convert rows into a raw JSON array of objects
             globalData = XLSX.utils.sheet_to_json(worksheet);
+            console.log("Parsed row data array count:", globalData.length);
             
             if (globalData.length === 0) {
                 alert("Warning: No row entries detected in this sheet. Ensure headers match expected attributes.");
@@ -100,11 +107,11 @@ function handleFile(file) {
             buildTabulatorTable();
             rebuildUIFromMemory();
         } catch (error) {
-            console.error("Excel File Ingestion Error:", error);
+            console.error("Excel File Ingestion Error Details:", error);
             alert("Could not process spreadsheet. Please ensure it is a valid .xlsx or .xls file.");
         }
     };
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(rawFileObject);
 }
 
 // 2. THE SPREADSHEET ENGINE: Initialize Tabulator configuration
@@ -237,37 +244,40 @@ function attachNodeInteractivity(children) {
         });
     });
 }
-
 function parseOtherMatches(rawString) {
     if (!rawString) return [];
     try {
         let clean = rawString.trim();
         if(clean.startsWith("{") && clean.endsWith("}")) {
-            const cleanJson = JSON.parse(clean);
-            return Object.entries(cleanJson).map(([name, score]) => ({ name, score }));
-        }
+             const cleanJson = JSON.parse(clean);
+             return Object.entries(cleanJson).map(([name, score]) => ({ name, score }));
+         }
+         return [];
+        } 
+    catch(err) {
+        console.warn("Could not extract alternate dataset configurations", err);
         return [];
-    } catch(err) {console.warn("Could not extract alternate dataset configurations", err);
-                  return [];
-                 }
-}function removeExistingTooltips() {
+    }
+}
+function removeExistingTooltips() {
     document.querySelectorAll(".node-alternates-tooltip").forEach(t => t.remove());
 }
 // 5. DATA STATE OPERATIONS: Re-assign parent references
 function updateAttributeParent(attributeName, newParentName) {
     const targetRow = globalData.find(row => row["Attribute"] === attributeName);
-    if (targetRow) {targetRow["Recommended Merge"] = newParentName;
-                    targetRow["Set Status To"] = "MERGE";
-                    if (tabulatorTable) tabulatorTable.setData(globalData);
-                    rebuildUIFromMemory();
-                   }
+    if (targetRow) {
+        targetRow["Recommended Merge"] = newParentName;targetRow["Set Status To"] = "MERGE";
+        if (tabulatorTable) tabulatorTable.setData(globalData);
+        rebuildUIFromMemory();
+    }
 }
 // 6. SYNCHRONIZATION AND WRITING: Collect visual changes back into the final pipeline data grid
 function syncTreesToMemory() {
-    if (tabulatorTable) {globalData = tabulatorTable.getData();
-                         rebuildUIFromMemory();
-                         alert("State variables synchronized successfully.");
-                        }
+    if (tabulatorTable) {
+        globalData = tabulatorTable.getData();
+        rebuildUIFromMemory();
+        alert("State variables synchronized successfully.");
+    }
 }
 // 7. FILE EXPORT PIPELINE: Write active data matrices straight to dynamic spreadsheet files
 function exportToExcel() {
