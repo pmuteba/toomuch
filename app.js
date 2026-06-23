@@ -17,7 +17,7 @@ function initEventHandlers() {
     // File change handler via standard browsing window click
     fileInput.addEventListener("change", (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            handleFile(e.target.files[0]); // FIXED: Isolate the single raw file object [0]
+            handleFile(e.target.files[0]); // FIXED: Explicitly extract the first file object from the list
         }
     });
 
@@ -48,7 +48,7 @@ function initEventHandlers() {
     dropzone.addEventListener("drop", (e) => {
         const dt = e.dataTransfer;
         if (dt.files && dt.files.length > 0) {
-            handleFile(dt.files[0]); // FIXED: Isolate the single raw file object [0]
+            handleFile(dt.files[0]); // FIXED: Explicitly extract the first file object from the drop payload
         }
     }, false);
 
@@ -76,7 +76,7 @@ function handleFile(file) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // FIXED: Target index [0] to extract the first spreadsheet sheet key string safely
+            // FIXED: Added [0] index to correctly grab the first tab name string
             const firstSheetName = workbook.SheetNames[0]; 
             const worksheet = workbook.Sheets[firstSheetName];
             
@@ -247,23 +247,20 @@ function parseOtherMatches(rawString) {
             return Object.entries(cleanJson).map(([name, score]) => ({ name, score }));
         }
         return [];
-    } catch(err) {
-        console.warn("Could not extract alternate dataset configurations", err);
-        return [];
-    }
-}
-function removeExistingTooltips() {
+    } catch(err) {console.warn("Could not extract alternate dataset configurations", err);
+                  return [];
+                 }
+}function removeExistingTooltips() {
     document.querySelectorAll(".node-alternates-tooltip").forEach(t => t.remove());
 }
 // 5. DATA STATE OPERATIONS: Re-assign parent references
 function updateAttributeParent(attributeName, newParentName) {
     const targetRow = globalData.find(row => row["Attribute"] === attributeName);
-    if (targetRow) {
-        targetRow["Recommended Merge"] = newParentName;
-        targetRow["Set Status To"] = "MERGE";
-        if (tabulatorTable) tabulatorTable.setData(globalData);
-        rebuildUIFromMemory();
-    }
+    if (targetRow) {targetRow["Recommended Merge"] = newParentName;
+                    targetRow["Set Status To"] = "MERGE";
+                    if (tabulatorTable) tabulatorTable.setData(globalData);
+                    rebuildUIFromMemory();
+                   }
 }
 // 6. SYNCHRONIZATION AND WRITING: Collect visual changes back into the final pipeline data grid
 function syncTreesToMemory() {
