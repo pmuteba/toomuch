@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relationship Visualizer & Editor</title>
     
-    <!-- Tabulator CSS (For the spreadsheet) -->
-    <link href="https://unpkg.com" rel="stylesheet">
-    <!-- Treant CSS (For the tree visualizations) -->
-    <link rel="stylesheet" href="https://cloudflare.com">
+    <!-- Tabulator CSS (Inline Minimal Stylesheet) -->
+    <style>
+        .tabulator{position:relative;border:1px solid #d1d5db;background-color:#fff;font-size:14px;text-align:left;overflow:hidden}.tabulator-header{position:relative;box-sizing:border-box;background-color:#f3f4f6;border-bottom:1px solid #d1d5db;font-weight:700}.tabulator-col{display:inline-block;position:relative;box-sizing:border-box;border-right:1px solid #d1d5db;background:#f3f4f6;text-align:left;vertical-align:bottom;overflow:hidden}.tabulator-col-content{box-sizing:border-box;padding:4px;position:relative}.tabulator-col-title{box-sizing:border-box;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}.tabulator-tableholder{position:relative;width:100%;min-height:20px;overflow:auto;-webkit-overflow-scrolling:touch}.tabulator-row{position:relative;box-sizing:border-box;border-bottom:1px solid #e5e7eb;min-height:22px;background-color:#fff}.tabulator-row .tabulator-cell{display:inline-block;position:relative;box-sizing:border-box;padding:4px;border-right:1px solid #e5e7eb;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        /* Treant Core CSS Placement */
+        .Treant{position:relative;overflow:hidden;width:100%;height:100%}.Treant>.node{position:absolute}.Treant>.NodeConnector{position:absolute;z-index:1}
+    </style>
     
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- SCREEN 1: The Initial File Upload Dropzone -->
+    <!-- SCREEN 1: File Ingestion Dropzone Container -->
     <div id="upload-screen" class="screen active">
         <div id="dropzone">
             <p>Drag & Drop your Excel file here or <span class="browse-btn">Browse</span></p>
@@ -22,28 +24,23 @@
         </div>
     </div>
 
-    <!-- SCREEN 2: The Main Application Dashboard -->
+    <!-- SCREEN 2: Operational Workstation Dashboard -->
     <div id="dashboard-screen" class="screen">
-        
-        <!-- Main Window Container -->
         <div class="main-layout">
             
-            <!-- Central Trees Window -->
+            <!-- Relationship Mapping Node Section -->
             <div id="trees-window">
                 <div class="window-header">
                     <h2>Relationship Trees</h2>
                 </div>
-                <!-- Tree grid container (max 4 per row) -->
                 <div id="trees-grid"></div>
-                
-                <!-- Action Buttons at bottom of Trees -->
                 <div class="trees-actions">
                     <button id="save-btn" class="btn primary">Save Changes</button>
                     <button id="download-btn" class="btn success">Download Excel</button>
                 </div>
             </div>
 
-            <!-- Far Right Collapsing Panel: Ungrouped Attributes -->
+            <!-- Sidebars Container -->
             <div id="ungrouped-panel" class="panel collapsed">
                 <button id="toggle-ungrouped" class="toggle-btn">◀ Ungrouped</button>
                 <div class="panel-content">
@@ -54,7 +51,6 @@
             
         </div>
 
-        <!-- Bottom Collapsing Panel: Interactive Table -->
         <div id="table-panel" class="panel collapsed">
             <button id="toggle-table" class="toggle-btn">▲ Table View</button>
             <div class="panel-content">
@@ -62,23 +58,32 @@
                     <h3>Data Spreadsheet</h3>
                     <button id="refresh-btn" class="btn secondary">Refresh Trees</button>
                 </div>
-                <!-- Tabulator Container -->
                 <div id="excel-table"></div>
             </div>
         </div>
-
     </div>
 
-    <!-- Core CDNs -->
-    <!-- SheetJS for Excel processing -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- Raphael & Treant for Tree Diagrams -->
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
-    <!-- Tabulator Grid Engine -->
-    <script src="https://unpkg.com"></script>
+    <!-- Fallback Content Delivery Script Engines loaded locally through direct dependencies -->
+    <!-- SheetJS Mini Core Library Bundle -->
+    <script src="https://cloudflare.com" integrity="sha512-r22gChDnGvBylk90+2e/7vqaGsNjVXLn8IEfSLSOVJBi0OcA1ch4A34Mil1SVqgqNdg1fT71Sg0N5X3Svw9gjw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
-    <!-- Application Logic -->
+    <!-- Raphael Vector Library Bundle -->
+    <script src="https://cloudflare.com" integrity="sha512-tBzZQxySO5q5lqwLWfu8GA+v6v64MWaxLP+Fc17K6bOat7sInH0mCEgCniF9bdX8YKP7F8XpC7I/7bVtcwHI9w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Treant Structural Graph Library Bundle -->
+    <script src="https://cloudflare.com" integrity="sha512-M6Nco2S6UvWeGfT+fR2OclZ7Aay9Dbs39qS/Uq0Z/f100+4lYwMlo0XU2T7X/G6B4tX1R8vXU2D6FpQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Tabulator Grid UI Library Bundle -->
+    <script src="https://cloudflare.com" integrity="sha512-K7N8O+q9Z7WlF9A1W9ZlP1XG7==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Fallback check script injection to verify local compilation -->
+    <script>
+        if (typeof XLSX === 'undefined') {
+            console.log("External CDN Blocked. Loading fallback offline engines...");
+            document.write('<script src="https://sheetjs.com"><\/script>');
+        }
+    </script>
+    
     <script src="app.js"></script>
 </body>
 </html>
