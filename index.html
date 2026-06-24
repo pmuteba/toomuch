@@ -5,20 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SME Attribute Merge Assistant</title>
     
-    <!-- Tailwind CSS Engine CDN -->
+    <!-- Tailwind CSS Script CDN -->
     <script src="https://tailwindcss.com"></script>
     
-    <!-- FIXED: Authoritative Standalone Browser Distribution for SheetJS -->
-    <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Official Authoritative SheetJS Standalone Browser Distribution CDN -->
+    <script type="text/javascript" src="https://sheetjs.com"></script>
 
     <style>
-        /* Base Canvas Grid Partitions */
+        /* Base Canvas Grid Layout & Partitions */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111827;
+        }
+
         #app-view {
             display: flex !important;
             flex-direction: column;
             height: 100vh;
             width: 100vw;
-            background-color: #111827; /* Gray-900 */
+            background-color: #111827;
         }
         
         .main-split-frame {
@@ -36,7 +43,7 @@
             background-color: #111827;
         }
 
-        /* Enforce Grid Structure for Tree Cards */
+        /* Enforce Responsive Grid Structure for Tree Cards */
         #trees-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -44,16 +51,16 @@
             width: 100%;
         }
 
-        /* Color Coding Mapping Blocks */
+        /* Status Color Coding Blocks */
         .status-DROP { border-left: 6px solid #EF4444 !important; color: #EF4444 !important; background-color: #1F2937; } 
         .status-NAV { border-left: 6px solid #3B82F6 !important; color: #3B82F6 !important; background-color: #1F2937; }  
         .status-KEEP { border-left: 6px solid #10B981 !important; color: #10B981 !important; background-color: #1F2937; } 
         .status-WIP { border-left: 6px solid #F59E0B !important; color: #F59E0B !important; background-color: #1F2937; }  
         .status-MERGE { border-left: 6px solid #F97316 !important; color: #F97316 !important; background-color: #1F2937; }
 
-        /* Card Elements layout */
+        /* Card Elements Style Rules */
         .tree-card {
-            background-color: #1F2937; /* Gray-800 */
+            background-color: #1F2937;
             padding: 1rem;
             border-radius: 0.75rem;
             border: 1px solid #374151;
@@ -84,7 +91,7 @@
             border-color: #F97316;
         }
 
-        /* Panel Sizing Bounds overrides */
+        /* Panel Sizing Bounds Overrides */
         .sidebar-panel {
             width: 320px !important;
             background-color: #1F2937;
@@ -113,7 +120,6 @@
         }
     </style>
 </head>
-
 <body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- DROPZONE / UPLOAD VIEW -->
@@ -128,10 +134,10 @@
         </div>
     </div>
 
-    <!-- MAIN APP VIEW (Hidden until file is loaded) -->
+    <!-- MAIN APP VIEW (Revealed on successful parse) -->
     <div id="app-view" class="hidden flex-1 flex flex-col overflow-hidden">
-        <!-- Header -->
-        <header class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <!-- Header Matrix -->
+        <header class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center shrink-0">
             <h1 class="text-lg font-bold tracking-wide text-indigo-400">Data Deduplication Dashboard</h1>
             <div class="flex space-x-3">
                 <button id="btn-save" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded shadow transition-colors">Save State</button>
@@ -140,53 +146,47 @@
         </header>
 
         <!-- Dynamic Content Splitting Frame -->
-        <div class="flex-1 flex overflow-hidden relative">
+        <div class="main-split-frame">
             
-            <!-- LEFT: Trees Main window -->
+            <!-- LEFT CANVAS: Trees Window -->
             <main class="flex-1 p-6 overflow-y-auto" id="trees-window">
-                <div id="trees-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <!-- Tree Visual Cards injected here dynamically -->
+                <div id="trees-grid">
+                    <!-- Cards dynamically injected here -->
                 </div>
             </main>
 
-            <!-- RIGHT: Collapsing Ungrouped Sidebar Panel -->
-            <aside id="ungrouped-panel" class="w-80 bg-gray-800 border-l border-gray-700 flex flex-col transition-all duration-300 transform translate-x-0 relative">
-                <!-- Toggle Button Anchor -->
-                <button id="toggle-ungrouped" class="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2 bg-gray-800 border border-r-0 border-gray-700 p-2 rounded-l-md text-gray-400 hover:text-white">
+            <!-- RIGHT CANVAS: Collapsing Sidebar Panel -->
+            <aside id="ungrouped-panel" class="sidebar-panel relative">
+                <!-- Collapse Button Toggle Anchor -->
+                <button id="toggle-ungrouped" class="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2 bg-gray-800 border border-r-0 border-gray-700 p-2 rounded-l-md text-gray-400 hover:text-white z-20">
                     ⏴
                 </button>
                 <div class="p-4 border-b border-gray-700">
                     <h2 class="font-bold text-gray-200">Ungrouped Attributes</h2>
                 </div>
                 <div id="ungrouped-list" class="flex-1 overflow-y-auto p-4 space-y-2">
-                    <!-- List items injected here dynamically -->
+                    <!-- List items dynamically injected here -->
                 </div>
             </aside>
         </div>
 
-        <!-- BOTTOM: Collapsing Table Window -->
-        <footer id="table-panel" class="bg-gray-800 border-t border-gray-700 flex flex-col h-64 transition-all duration-300">
+        <!-- BOTTOM CANVAS: Table Panel Grid -->
+        <footer id="table-panel" class="footer-table-panel shrink-0">
             <div class="px-6 py-2 bg-gray-850 border-b border-gray-700 flex justify-between items-center shrink-0">
                 <div class="flex items-center space-x-4">
                     <button id="toggle-table" class="font-bold text-gray-400 hover:text-white text-sm">▼ Row Sheet Data</button>
                 </div>
                 <button id="btn-refresh" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-gray-200">Refresh Interface</button>
             </div>
-            <div id="table-container" class="flex-1 overflow-auto p-4">
-                <!-- Editable native Grid built here -->
+            <div id="table-container" class="flex-1 overflow-auto p-4 bg-gray-900">
                 <table class="w-full text-left border-collapse text-xs text-gray-300" id="data-table">
-                    <!-- Dynamic sheet elements go here -->
+                    <!-- Table markup dynamically injected here -->
                 </table>
             </div>
         </footer>
     </div>
 
-    <!-- Interactive script runtime injection point -->
-    <script>
-        // Data states
-        let globalData = [];      // Raw Excel rows parsing target
-        let treeStructures = {};  // Root-Child relationships map
-        let ungroupedList = [];   // Leftover attributes status list
-    </script>
+    <!-- Link code logic driver script -->
+    <script src="app.js"></script>
 </body>
 </html>
