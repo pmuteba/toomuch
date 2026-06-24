@@ -4,22 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SME Attribute Merge Assistant</title>
-    <!-- Tailwind CSS for UI Layout -->
+    
+    <!-- Tailwind CSS Engine CDN -->
     <script src="https://tailwindcss.com"></script>
-    <!-- SheetJS for local Excel Parsing & Export -->
-    <script src="https://cloudflare.com"></script>
+    
+    <!-- FIXED: Authoritative Standalone Browser Distribution for SheetJS -->
+    <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
     <style>
         /* Color coding mapping for Statuses */
-        .status-DROP { border-left: 6px solid #EF4444; color: #EF4444; } /* Red */
-        .status-NAV { border-left: 6px solid #3B82F6; color: #3B82F6; }  /* Blue */
-        .status-KEEP { border-left: 6px solid #10B981; color: #10B981; } /* Green */
-        .status-WIP { border-left: 6px solid #F59E0B; color: #F59E0B; }  /* Yellow */
-        .status-MERGE { border-left: 6px solid #F97316; color: #F97316; }/* Orange */
+        .status-DROP { border-left: 6px solid #EF4444; color: #EF4444; } 
+        .status-NAV { border-left: 6px solid #3B82F6; color: #3B82F6; }  
+        .status-KEEP { border-left: 6px solid #10B981; color: #10B981; } 
+        .status-WIP { border-left: 6px solid #F59E0B; color: #F59E0B; }  
+        .status-MERGE { border-left: 6px solid #F97316; color: #F97316; }
         
         .tree-node { transition: all 0.2s ease; }
         .tree-container { min-height: 150px; }
     </style>
 </head>
+
 <body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- DROPZONE / UPLOAD VIEW -->
