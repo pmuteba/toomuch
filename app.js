@@ -17,8 +17,7 @@ function initEventHandlers() {
     // File change handler via standard browsing window click
     fileInput.addEventListener("change", (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            console.log("File picked via browser:", e.target.files[0]);
-            handleFile(e.target.files[0]); // FIXED: Extracted the single raw File object
+            handleFile(e.target.files[0]); // FIXED: Isolate the raw file object directly
         }
     });
 
@@ -49,8 +48,7 @@ function initEventHandlers() {
     dropzone.addEventListener("drop", (e) => {
         const dt = e.dataTransfer;
         if (dt.files && dt.files.length > 0) {
-            console.log("File picked via drag and drop:", dt.files[0]);
-            handleFile(dt.files[0]); // FIXED: Extracted the single raw File object
+            handleFile(dt.files[0]); // FIXED: Isolate the raw file object directly
         }
     }, false);
 
@@ -70,52 +68,58 @@ function initEventHandlers() {
 }
 
 // 1. DATA INGESTION: Read uploaded Excel sheet into memory
-function handleFile(rawFileObject) {
-    if (!rawFileObject) return;
+function handleFile(fileObject) {
+    if (!fileObject) return;
     
-    console.log("Executing FileReader on target file:", rawFileObject.name);
+    console.log("Running FileReader on object:", fileObject.name);
     const reader = new FileReader();
     
     reader.onload = (e) => {
         try {
+            // Confirm library initialization state flags directly before processing parsing pipeline
+            if (typeof XLSX === 'undefined') {
+                throw new Error("XLSX core engine library failed to load due to network security rules.");
+            }
+
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // FIXED: Target index 0 to grab the first sheet tab name string correctly
+            // FIXED: Isolates first index string directly
             const firstSheetName = workbook.SheetNames[0]; 
-            console.log("Targeting sheet tab name:", firstSheetName);
+            console.log("Accessing spreadsheet sheet page title:", firstSheetName);
             
             const worksheet = workbook.Sheets[firstSheetName];
             if (!worksheet) {
-                throw new Error("The selected Excel sheet appears to be empty.");
+                throw new Error("Target sheet dataset structure evaluates as empty.");
             }
             
             // Convert rows into a raw JSON array of objects
             globalData = XLSX.utils.sheet_to_json(worksheet);
-            console.log("Parsed row data array count:", globalData.length);
+            console.log("Successfully extracted rows into memory:", globalData.length);
             
             if (globalData.length === 0) {
-                alert("Warning: No row entries detected in this sheet. Ensure headers match expected attributes.");
+                alert("The uploaded Excel sheet contains no valid row entries.");
                 return;
             }
 
-            // Switch interface screens
+            // Transition interfaces screens
             document.getElementById("upload-screen").classList.remove("active");
             document.getElementById("dashboard-screen").classList.add("active");
             
-            // Render spreadsheet & trees
+            // Populate spreadsheet views
             buildTabulatorTable();
             rebuildUIFromMemory();
         } catch (error) {
-            console.error("Excel File Ingestion Error Details:", error);
-            alert("Could not process spreadsheet. Please ensure it is a valid .xlsx or .xls file.");
+            console.error("Critical Runtime Ingestion Exception:", error);
+            alert("File processing failed: " + error.message);
         }
     };
-    reader.readAsArrayBuffer(rawFileObject);
+    reader.readAsArrayBuffer(fileObject);
 }
 
 // 2. THE SPREADSHEET ENGINE: Initialize Tabulator configuration
 function buildTabulatorTable() {
+    if (typeof Tabulator === 'undefined') return;
     tabulatorTable = new Tabulator("#excel-table", {
         data: globalData,
         layout: "fitColumns",
@@ -172,30 +176,32 @@ function rebuildUIFromMemory() {
 
     // Generate functional HTML containers for each individual relationship group
     let treeCounter = 0;
-    for (const [rootNodeName, children] of Object.entries(treeMap)) {
-        const treeContainerId = `tree-canvas-${treeCounter++}`;
-        
-        const card = document.createElement("div");
-        card.className = "tree-card";
-        card.innerHTML = `<div id="${treeContainerId}" class="tree-canvas-render"></div>`;
-        treeGrid.appendChild(card);
+    if (typeof Treant !== 'undefined') {
+        for (const [rootNodeName, children] of Object.entries(treeMap)) {
+            const treeContainerId = `tree-canvas-${treeCounter++}`;
+            
+            const card = document.createElement("div");
+            card.className = "tree-card";
+            card.innerHTML = `<div id="${treeContainerId}" class="tree-canvas-render"></div>`;
+            treeGrid.appendChild(card);
 
-        const treantConfig = {
-            chart: { container: `#${treeContainerId}`, connecters: { type: "step" } },
-            nodeStructure: {
-                text: { name: rootNodeName },
-                HTMLclass: "root-node-style",
-                children: children.map(child => ({
-                    text: { name: child["Attribute"] },
-                    HTMLclass: "leaf-node-style",
-                    HTMLid: `node-${btoa(encodeURIComponent(child["Attribute"]))}`, 
-                    dataAttributes: { attr: child["Attribute"] }
-                }))
-            }
-        };
+            const treantConfig = {
+                chart: { container: `#${treeContainerId}`, connecters: { type: "step" } },
+                nodeStructure: {
+                    text: { name: rootNodeName },
+                    HTMLclass: "root-node-style",
+                    children: children.map(child => ({
+                        text: { name: child["Attribute"] },
+                        HTMLclass: "leaf-node-style",
+                        HTMLid: `node-${btoa(encodeURIComponent(child["Attribute"]))}`, 
+                        dataAttributes: { attr: child["Attribute"] }
+                    }))
+                }
+            };
 
-        new Treant(treantConfig);
-        attachNodeInteractivity(children);
+            new Treant(treantConfig);
+            attachNodeInteractivity(children);
+        }
     }
 }
 
@@ -231,9 +237,8 @@ function attachNodeInteractivity(children) {
             document.body.appendChild(tooltip);
             const rect = nodeElement.getBoundingClientRect();
             tooltip.style.left = `${rect.left + window.scrollX}px`;
-            tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            tooltip.style.top = ${rect.bottom + window.scrollY + 5}px;
         });
-
         nodeElement.addEventListener("mouseleave", (e) => {
             setTimeout(() => {
                 const activeTooltip = document.querySelector(".node-alternates-tooltip");
@@ -249,11 +254,11 @@ function parseOtherMatches(rawString) {
     try {
         let clean = rawString.trim();
         if(clean.startsWith("{") && clean.endsWith("}")) {
-             const cleanJson = JSON.parse(clean);
-             return Object.entries(cleanJson).map(([name, score]) => ({ name, score }));
-         }
-         return [];
-        } 
+            const cleanJson = JSON.parse(clean);
+            return Object.entries(cleanJson).map(([name, score]) => ({ name, score }));
+        }
+        return [];
+    } 
     catch(err) {
         console.warn("Could not extract alternate dataset configurations", err);
         return [];
@@ -262,11 +267,12 @@ function parseOtherMatches(rawString) {
 function removeExistingTooltips() {
     document.querySelectorAll(".node-alternates-tooltip").forEach(t => t.remove());
 }
-// 5. DATA STATE OPERATIONS: Re-assign parent references
-function updateAttributeParent(attributeName, newParentName) {
+// 5. DATA STATE OPERATIONS: Re-assign parent referencesfunction update
+AttributeParent(attributeName, newParentName) {
     const targetRow = globalData.find(row => row["Attribute"] === attributeName);
     if (targetRow) {
-        targetRow["Recommended Merge"] = newParentName;targetRow["Set Status To"] = "MERGE";
+        targetRow["Recommended Merge"] = newParentName;
+        targetRow["Set Status To"] = "MERGE";
         if (tabulatorTable) tabulatorTable.setData(globalData);
         rebuildUIFromMemory();
     }
