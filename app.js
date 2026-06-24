@@ -54,35 +54,52 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // --- Excel Engine File Parsing ---
-function handleExcelParsing(file) {
+function handleExcelParsing(fileList) {
+    const file = fileList[0]; // Safely pull the first file item from the drop array
     const reader = new FileReader();
+    
     reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Transform worksheet data strictly to JSON objects array
-        globalData = XLSX.utils.sheet_to_json(worksheet);
-        
-        // Standardize base column cases if missing
-        globalData = globalData.map(row => ({
-            'Parent Attribute': row['Parent Attribute'] || '',
-            'Attribute': row['Attribute'] || '',
-            'Set Status To': row['Set Status To'] || 'WIP',
-            'Recommended Merge': row['Recommended Merge'] || '',
-            'Other Matches': row['Other Matches'] || '',
-            ...row
-        }));
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // FIXED: Target the first sheet index [0] explicitly from the sheet names array
+            const firstSheetName = workbook.SheetNames[0]; 
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Transform worksheet data strictly to JSON objects array
+            globalData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (!globalData || globalData.length === 0) {
+                alert("The first sheet appears to be empty.");
+                return;
+            }
 
-        buildStateFromData();
-        renderInterface();
+            // Standardize base column cases if missing
+            globalData = globalData.map(row => ({
+                'Parent Attribute': row['Parent Attribute'] || '',
+                'Attribute': row['Attribute'] || '',
+                'Set Status To': row['Set Status To'] || 'WIP',
+                'Recommended Merge': row['Recommended Merge'] || '',
+                'Other Matches': row['Other Matches'] || '',
+                ...row
+            }));
 
-        uploadView.classList.add('hidden');
-        appView.classList.remove('hidden');
+            buildStateFromData();
+            renderInterface();
+
+            // Transition UI views
+            uploadView.classList.add('hidden');
+            appView.classList.remove('hidden');
+            
+        } catch (error) {
+            console.error("Parsing Error details:", error);
+            alert("Failed to parse the Excel file. Please open your browser console (F12) to see details.");
+        }
     };
     reader.readAsArrayBuffer(file);
 }
+
 
 // --- Parse Matrix States Logic ---
 function buildStateFromData() {
