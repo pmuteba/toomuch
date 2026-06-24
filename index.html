@@ -3,87 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relationship Visualizer & Editor</title>
-    
-    <!-- Tabulator CSS (Inline Minimal Stylesheet) -->
+    <title>SME Attribute Merge Assistant</title>
+    <!-- Tailwind CSS for UI Layout -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- SheetJS for local Excel Parsing & Export -->
+    <script src="https://cloudflare.com"></script>
     <style>
-        .tabulator{position:relative;border:1px solid #d1d5db;background-color:#fff;font-size:14px;text-align:left;overflow:hidden}.tabulator-header{position:relative;box-sizing:border-box;background-color:#f3f4f6;border-bottom:1px solid #d1d5db;font-weight:700}.tabulator-col{display:inline-block;position:relative;box-sizing:border-box;border-right:1px solid #d1d5db;background:#f3f4f6;text-align:left;vertical-align:bottom;overflow:hidden}.tabulator-col-content{box-sizing:border-box;padding:4px;position:relative}.tabulator-col-title{box-sizing:border-box;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}.tabulator-tableholder{position:relative;width:100%;min-height:20px;overflow:auto;-webkit-overflow-scrolling:touch}.tabulator-row{position:relative;box-sizing:border-box;border-bottom:1px solid #e5e7eb;min-height:22px;background-color:#fff}.tabulator-row .tabulator-cell{display:inline-block;position:relative;box-sizing:border-box;padding:4px;border-right:1px solid #e5e7eb;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        /* Treant Core CSS Placement */
-        .Treant{position:relative;overflow:hidden;width:100%;height:100%}.Treant>.node{position:absolute}.Treant>.NodeConnector{position:absolute;z-index:1}
+        /* Color coding mapping for Statuses */
+        .status-DROP { border-left: 6px solid #EF4444; color: #EF4444; } /* Red */
+        .status-NAV { border-left: 6px solid #3B82F6; color: #3B82F6; }  /* Blue */
+        .status-KEEP { border-left: 6px solid #10B981; color: #10B981; } /* Green */
+        .status-WIP { border-left: 6px solid #F59E0B; color: #F59E0B; }  /* Yellow */
+        .status-MERGE { border-left: 6px solid #F97316; color: #F97316; }/* Orange */
+        
+        .tree-node { transition: all 0.2s ease; }
+        .tree-container { min-height: 150px; }
     </style>
-    
-    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
 
-    <!-- SCREEN 1: File Ingestion Dropzone Container -->
-    <div id="upload-screen" class="screen active">
-        <div id="dropzone">
-            <p>Drag & Drop your Excel file here or <span class="browse-btn">Browse</span></p>
-            <input type="file" id="file-input" accept=".xlsx, .xls" hidden>
+    <!-- DROPZONE / UPLOAD VIEW -->
+    <div id="upload-view" class="flex-1 flex flex-col items-center justify-center p-6">
+        <div class="max-w-xl w-full bg-gray-800 border-4 border-dashed border-gray-600 rounded-2xl p-12 text-center cursor-pointer hover:border-indigo-500 transition-colors" id="drop-zone">
+            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <h3 class="text-xl font-semibold mb-2">Upload Category Excel File</h3>
+            <p class="text-gray-400 text-sm mb-4">Drag and drop your spreadsheet here, or click to browse</p>
+            <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls">
         </div>
     </div>
 
-    <!-- SCREEN 2: Operational Workstation Dashboard -->
-    <div id="dashboard-screen" class="screen">
-        <div class="main-layout">
-            
-            <!-- Relationship Mapping Node Section -->
-            <div id="trees-window">
-                <div class="window-header">
-                    <h2>Relationship Trees</h2>
-                </div>
-                <div id="trees-grid"></div>
-                <div class="trees-actions">
-                    <button id="save-btn" class="btn primary">Save Changes</button>
-                    <button id="download-btn" class="btn success">Download Excel</button>
-                </div>
+    <!-- MAIN APP VIEW (Hidden until file is loaded) -->
+    <div id="app-view" class="hidden flex-1 flex flex-col overflow-hidden">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+            <h1 class="text-lg font-bold tracking-wide text-indigo-400">Data Deduplication Dashboard</h1>
+            <div class="flex space-x-3">
+                <button id="btn-save" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded shadow transition-colors">Save State</button>
+                <button id="btn-download" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded shadow transition-colors">Download Excel</button>
             </div>
+        </header>
 
-            <!-- Sidebars Container -->
-            <div id="ungrouped-panel" class="panel collapsed">
-                <button id="toggle-ungrouped" class="toggle-btn">◀ Ungrouped</button>
-                <div class="panel-content">
-                    <h3>Ungrouped Attributes</h3>
-                    <div id="ungrouped-list" class="scrollable-list"></div>
-                </div>
-            </div>
+        <!-- Dynamic Content Splitting Frame -->
+        <div class="flex-1 flex overflow-hidden relative">
             
+            <!-- LEFT: Trees Main window -->
+            <main class="flex-1 p-6 overflow-y-auto" id="trees-window">
+                <div id="trees-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Tree Visual Cards injected here dynamically -->
+                </div>
+            </main>
+
+            <!-- RIGHT: Collapsing Ungrouped Sidebar Panel -->
+            <aside id="ungrouped-panel" class="w-80 bg-gray-800 border-l border-gray-700 flex flex-col transition-all duration-300 transform translate-x-0 relative">
+                <!-- Toggle Button Anchor -->
+                <button id="toggle-ungrouped" class="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2 bg-gray-800 border border-r-0 border-gray-700 p-2 rounded-l-md text-gray-400 hover:text-white">
+                    ⏴
+                </button>
+                <div class="p-4 border-b border-gray-700">
+                    <h2 class="font-bold text-gray-200">Ungrouped Attributes</h2>
+                </div>
+                <div id="ungrouped-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                    <!-- List items injected here dynamically -->
+                </div>
+            </aside>
         </div>
 
-        <div id="table-panel" class="panel collapsed">
-            <button id="toggle-table" class="toggle-btn">▲ Table View</button>
-            <div class="panel-content">
-                <div class="table-header-actions">
-                    <h3>Data Spreadsheet</h3>
-                    <button id="refresh-btn" class="btn secondary">Refresh Trees</button>
+        <!-- BOTTOM: Collapsing Table Window -->
+        <footer id="table-panel" class="bg-gray-800 border-t border-gray-700 flex flex-col h-64 transition-all duration-300">
+            <div class="px-6 py-2 bg-gray-850 border-b border-gray-700 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-4">
+                    <button id="toggle-table" class="font-bold text-gray-400 hover:text-white text-sm">▼ Row Sheet Data</button>
                 </div>
-                <div id="excel-table"></div>
+                <button id="btn-refresh" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-gray-200">Refresh Interface</button>
             </div>
-        </div>
+            <div id="table-container" class="flex-1 overflow-auto p-4">
+                <!-- Editable native Grid built here -->
+                <table class="w-full text-left border-collapse text-xs text-gray-300" id="data-table">
+                    <!-- Dynamic sheet elements go here -->
+                </table>
+            </div>
+        </footer>
     </div>
 
-    <!-- Fallback Content Delivery Script Engines loaded locally through direct dependencies -->
-    <!-- SheetJS Mini Core Library Bundle -->
-    <script src="https://cloudflare.com" integrity="sha512-r22gChDnGvBylk90+2e/7vqaGsNjVXLn8IEfSLSOVJBi0OcA1ch4A34Mil1SVqgqNdg1fT71Sg0N5X3Svw9gjw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    
-    <!-- Raphael Vector Library Bundle -->
-    <script src="https://cloudflare.com" integrity="sha512-tBzZQxySO5q5lqwLWfu8GA+v6v64MWaxLP+Fc17K6bOat7sInH0mCEgCniF9bdX8YKP7F8XpC7I/7bVtcwHI9w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    
-    <!-- Treant Structural Graph Library Bundle -->
-    <script src="https://cloudflare.com" integrity="sha512-M6Nco2S6UvWeGfT+fR2OclZ7Aay9Dbs39qS/Uq0Z/f100+4lYwMlo0XU2T7X/G6B4tX1R8vXU2D6FpQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    
-    <!-- Tabulator Grid UI Library Bundle -->
-    <script src="https://cloudflare.com" integrity="sha512-K7N8O+q9Z7WlF9A1W9ZlP1XG7==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-    <!-- Fallback check script injection to verify local compilation -->
+    <!-- Interactive script runtime injection point -->
     <script>
-        if (typeof XLSX === 'undefined') {
-            console.log("External CDN Blocked. Loading fallback offline engines...");
-            document.write('<script src="https://sheetjs.com"><\/script>');
-        }
+        // Data states
+        let globalData = [];      // Raw Excel rows parsing target
+        let treeStructures = {};  // Root-Child relationships map
+        let ungroupedList = [];   // Leftover attributes status list
     </script>
-    
-    <script src="app.js"></script>
 </body>
 </html>
