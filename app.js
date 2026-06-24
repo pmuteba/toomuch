@@ -55,7 +55,7 @@ fileInput.addEventListener('change', (e) => {
 
 // --- Excel Engine File Parsing ---
 function handleExcelParsing(fileList) {
-    const file = fileList[0]; // Safely pull the first file item from the drop array
+    const file = fileList[0] || fileList; // Safely pull the first file item from the drop array
     const reader = new FileReader();
     
     reader.onload = function(e) {
